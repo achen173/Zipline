@@ -3,8 +3,9 @@ import struct
 import errno
 import csv
 
+
 def get_direction(lidar_samples):
-    group = 3
+    group = 5
     lidar_samples = [sum(lidar_samples[x-group:x])/group for x in range(group, len(lidar_samples))]
     right, left = False, False
     sample_len = len(lidar_samples)
@@ -37,27 +38,57 @@ with open('test.csv', 'w', newline='') as csvfile:
         x = sys.stdin.buffer.read(struct.calcsize(">Hhffb31B"))
         sim_input = list(struct.unpack(">Hhffb31B", x))
         data = {'time': sim_input[0], 'recX': sim_input[1], 'windX': sim_input[2], 'windY': sim_input[3], 'recY': sim_input[4],'sample': sim_input[-31:]}
-        right, left = get_direction(data['sample'])
-        if right:
-            ideal = -10
-            if data['windY'] > 0:
-                speed = ideal - data['windY']
+        if data['recX'] <= 35:  # landing
+            # derive lateral airspeed based on windX and recY
+            if data['recY'] == 0:   # maintain course
+                ans = struct.pack(">fBBBB", -1*data['windY'], 0, 0, 0, 0)
+                spamwriter.writerow(sim_input)
+                sys.stdout.buffer.write(ans)
+                sys.stdout.buffer.flush()
             else:
-                speed = ideal + abs(data['windY'])
-            ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
-        elif left:
-            ideal = 10
-            if data['windY'] > 0:
-                speed = ideal - data['windY']
-            else:
-                speed = ideal + abs(data['windY'])
-            ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
+                if abs(data['recY']) >= 22:
+                    ans = struct.pack(">fBBBB", (abs(data['recY'])/data['recY'])*30, 0, 0, 0, 0)
+                    spamwriter.writerow(['forced', -30])
+                    spamwriter.writerow(sim_input)
+                    sys.stdout.buffer.write(ans)
+                    sys.stdout.buffer.flush()
+                else:
+                    ans = struct.pack(">fBBBB", (abs(data['recY'])/data['recY'])*30, 0, 0, 0, 0)
+                    spamwriter.writerow(['forced', -1*data['windY'] + -1*data['recY']])
+                    spamwriter.writerow(sim_input)
+                    sys.stdout.buffer.write(ans)
+                    sys.stdout.buffer.flush()
+                # if data['recY'] > 0:
+                #     ans = struct.pack(">fBBBB", -30, 0, 0, 0, 0)
+                #     spamwriter.writerow(sim_input)
+                #     sys.stdout.buffer.write(ans)
+                #     sys.stdout.buffer.flush()
+                # else:
+                #     ans = struct.pack(">fBBBB", 30, 0, 0, 0, 0)
+                #     spamwriter.writerow(sim_input)
+                #     sys.stdout.buffer.write(ans)
+                #     sys.stdout.buffer.flush()
         else:
-            ans = struct.pack(">fBBBB", -1*data['windY'], 0, 0, 0, 0)
-        # spamwriter.writerow(list(struct.unpack(">Hhffb31B", x)))
-        # ans = struct.pack(">fBBBB", 0, 0, 0, 0, 0)
-        sys.stdout.buffer.write(ans)
-        sys.stdout.buffer.flush()
+            right, left = get_direction(data['sample'])
+            if right:
+                ideal = -10
+                if data['windY'] > 0:
+                    speed = ideal - data['windY']
+                else:
+                    speed = ideal + abs(data['windY'])
+                ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
+            elif left:
+                ideal = 10
+                if data['windY'] > 0:
+                    speed = ideal - data['windY']
+                else:
+                    speed = ideal + abs(data['windY'])
+                ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
+            else:
+                ans = struct.pack(">fBBBB", -1*data['windY'], 0, 0, 0, 0)
+            spamwriter.writerow(sim_input)
+            sys.stdout.buffer.write(ans)
+            sys.stdout.buffer.flush()
 
 
 
