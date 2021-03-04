@@ -20,9 +20,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e07980ae-0eed-44a1-b62e-704d95095d8d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/zip_sim.py" beforeDir="false" afterPath="$PROJECT_DIR$/zip_sim.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/my_pilot.py" beforeDir="false" afterPath="$PROJECT_DIR$/my_pilot.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

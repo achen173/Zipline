@@ -39,14 +39,14 @@ with open('test.csv', 'w', newline='') as csvfile:
         data = {'time': sim_input[0], 'recX': sim_input[1], 'windX': sim_input[2], 'windY': sim_input[3], 'recY': sim_input[4],'sample': sim_input[-31:]}
         right, left = get_direction(data['sample'])
         if right:
-            ideal = -20
+            ideal = -10
             if data['windY'] > 0:
                 speed = ideal - data['windY']
             else:
                 speed = ideal + abs(data['windY'])
             ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
         elif left:
-            ideal = 20
+            ideal = 10
             if data['windY'] > 0:
                 speed = ideal - data['windY']
             else:
