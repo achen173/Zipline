@@ -390,6 +390,8 @@ if __name__ == "__main__":
 
     while result is None:
         drop_package_commanded = False
+        # lidar_samples = cast_lidar(vehicle.position, lidar_objects)
+        # print(*lidar_samples)
         if api_mode:
             lidar_samples = cast_lidar(vehicle.position, lidar_objects)
             pilot.stdin.write(TELEMETRY_STRUCT.pack(int(loop_count * DT_SEC * 1e3) & 0xFFFF,
@@ -527,9 +529,11 @@ if __name__ == "__main__":
                     package_count_by_site[s] = 1
 
     if api_mode:
+
         pilot.stdin.close()
         pilot.stdout.close()
-        pilot.wait()
+        pilot.kill()    # gonna have to find a more peaceful way to do this
+
     print("Deliveries: {}".format(len(package_count_by_site)))
     print("ZIPAA Violations: {}".format(sum((x - 1 for x in package_count_by_site.values() if x > 1))))
     sys.exit(result)
