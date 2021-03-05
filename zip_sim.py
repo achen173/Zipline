@@ -22,6 +22,7 @@ PAUSED_RATE = 30
 # The world size in meters. It's a bit weird because the world wraps around itself. The world's coordinate system is
 # always considered to be in the positive quadrant (coordinates in the world frame are always >= 0).
 WORLD_WIDTH = 50.0
+# WORLD_LENGTH = 2000.0
 WORLD_LENGTH = 2000.0
 
 # Scale is the size of each graphical pixel, in meters. This number is hardcoded into the artwork, and can't be easily
@@ -50,8 +51,10 @@ RECOVERY_Y_MIN = 7.5
 RECOVERY_Y_MAX = WORLD_WIDTH - 7.5
 
 NUM_DELIVERY_SITES = 10
-TYPICAL_NUM_TREES = 20
-MAX_NUM_TREES = 100
+TYPICAL_NUM_TREES = 0
+MAX_NUM_TREES = 0
+# TYPICAL_NUM_TREES = 20
+# MAX_NUM_TREES = 100
 
 # The vehicle always moves with constant forward airspeed. Its groundspeed varies based on the wind.
 VEHICLE_AIRSPEED = 30.0
@@ -213,6 +216,7 @@ class DeliverySite(Circle):
     _image = load_image("delivery_site.png")
 
     def __init__(self, position):
+        print(position)
         super().__init__(position, radius=DELIVERY_SITE_RADIUS)
 
     def draw(self, camera, surface):
@@ -306,6 +310,27 @@ def cast_lidar(start_pos, objects):
                          o.radius) for o in objects if o.position[0] > start_pos[0]]
     return [cast_lidar_ray(angle, relative_objects) for angle in LIDAR_ANGLES]
 
+def format_pacloc(delivery_site_location): # insert coord list of tuples
+    mydelivery_sample = []
+    temp = []
+    for site in delivery_site_location:
+        x, y = site
+        if len(temp) > 26:
+            while len(temp) != 31:
+                temp.append(0)
+            mydelivery_sample.append(temp)
+            temp = []
+        if len(str(int(x))) < 3:
+            temp += [int(x), 255, round(y)]
+        else:
+            first = int(str(int(x))[:2])
+            second = int(str(int(x))[2:])
+            temp += [first, second, 255, round(y)]
+    if len(temp) != 0:
+        while len(temp) != 31:
+            temp.append(0)
+        mydelivery_sample.append(temp)
+    return mydelivery_sample
 
 if __name__ == "__main__":
 
@@ -342,6 +367,7 @@ if __name__ == "__main__":
         visualizer_rate_index = INITIAL_VISUALIZER_RATE_INDEX
 
     # Randomly generate delivery sites that aren't too close to each other.
+    delivery_site_location = []
     delivery_sites = []
     for _ in range(NUM_DELIVERY_SITES):
         while True:
@@ -351,9 +377,9 @@ if __name__ == "__main__":
                         round(random.uniform(*DELIVERY_SITE_Y_BOUNDS) % WORLD_WIDTH, 1))
             if min((s.distance_to(site_pos) for s in delivery_sites),
                    default=MIN_DELIVERY_DISTANCE) >= MIN_DELIVERY_DISTANCE:
+                delivery_site_location.append(site_pos)
                 delivery_sites.append(DeliverySite(site_pos))
                 break
-
     # Randomly generate trees that aren't too close to delivery sites.
     trees = []
     tree_density = random.gauss(TYPICAL_NUM_TREES, MAX_NUM_TREES / 3)
@@ -387,19 +413,27 @@ if __name__ == "__main__":
     num_packages = len(delivery_sites)
     # List of package objects that have been dropped
     dropped_packages = []
+    
+    # import copy
 
+    mydelivery_sample = format_pacloc(delivery_site_location)
+    total_coord_package = len(mydelivery_sample)
+    increase = 0
     while result is None:
         drop_package_commanded = False
-        # lidar_samples = cast_lidar(vehicle.position, lidar_objects)
-        # print(*lidar_samples)
         if api_mode:
-            lidar_samples = cast_lidar(vehicle.position, lidar_objects)
-            pilot.stdin.write(TELEMETRY_STRUCT.pack(int(loop_count * DT_SEC * 1e3) & 0xFFFF,
+            lidar_samples = cast_lidar(vehicle.position, lidar_objects) # len(10)
+            package_timestamp = int(loop_count * DT_SEC * 1e3)
+            if total_coord_package != increase:    # send drop box location
+                package_timestamp = -1
+                lidar_samples = mydelivery_sample[increase]
+                increase += 1
+            pilot.stdin.write(TELEMETRY_STRUCT.pack(package_timestamp & 0xFFFF,
                                                     round(RECOVERY_X - vehicle.position[0]),
                                                     wind.vector[0],
                                                     wind.vector[1],
                                                     round((-vehicle.position[1] + WORLD_WIDTH_HALF) % WORLD_WIDTH -
-                                                          WORLD_WIDTH_HALF),
+                                                        WORLD_WIDTH_HALF),
                                                     *lidar_samples))
             pilot.stdin.flush()
             loop_count += 1
