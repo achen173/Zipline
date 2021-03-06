@@ -311,6 +311,7 @@ def cast_lidar(start_pos, objects):
     return [cast_lidar_ray(angle, relative_objects) for angle in LIDAR_ANGLES]
 
 def format_pacloc(delivery_site_location): # insert coord list of tuples
+    delivery_site_location = sorted(delivery_site_location, key=lambda x: x[0])
     mydelivery_sample = []
     temp = []
     for site in delivery_site_location:

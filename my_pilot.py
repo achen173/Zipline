@@ -6,6 +6,11 @@ result = []
 MAX_X = 2000    # 0 - 2000
 MAX_Y = 50      # -25 - 25
 
+def struct_format(speed, drop):
+    # speed = -/+30m/s
+    # drop = 1/0
+    return struct.pack(">fBBBB", speed, drop, 0, 0, 0)
+
 def get_direction(data):
     lidar_samples = data['sample']
     group = 5
@@ -36,21 +41,21 @@ def get_direction(data):
     
 def get_struct(windY, right, left):
     if right:
-        ideal = -10
+        ideal = -50
         if windY > 0:
             speed = ideal - windY
         else:
             speed = ideal + abs(windY)
-        ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
+        ans = struct_format(speed, 0)
     elif left:
-        ideal = 10
+        ideal = 50
         if windY > 0:
             speed = ideal - windY
         else:
             speed = ideal + abs(windY)
-        ans = struct.pack(">fBBBB", speed, 0, 0, 0, 0)
+        ans = struct_format(speed, 0)
     else:
-        ans = struct.pack(">fBBBB", -1*windY, 0, 0, 0, 0)
+        ans = struct_format(-1*windY, 0)
     return ans
 
 def add_coord(coord):
@@ -77,30 +82,77 @@ with open('test.csv', 'w', newline='') as csvfile:
         data = {'time': sim_input[0], 'recX': sim_input[1], 'windX': sim_input[2], 'windY': sim_input[3], 'recY': sim_input[4],'sample': sim_input[-31:]}
         if data['time'] == 65535:   # this is for getting the landing coord
             add_coord(data['sample'])
-            ans = struct.pack(">fBBBB", 0, 0, 0, 0, 0)
+            ans = struct_format(0, 0)
             spamwriter.writerow(sim_input)
+            spamwriter.writerow(result)
             sys.stdout.buffer.write(ans)
             sys.stdout.buffer.flush()
         else:
-            if data['recX'] <= 35:  # landing
+            landing = False
+            if len(result) > 0:
+                temp_max = MAX_X - result[0][0] + 25
+                temp_min = MAX_X - result[0][0] - 5
+                landing = True
+            if abs(data['recY']) >= 22:
+                ans = struct_format((abs(data['recY'])/data['recY'])*30, 0)
+                spamwriter.writerow(sim_input)
+                sys.stdout.buffer.write(ans)
+                sys.stdout.buffer.flush()
+            elif landing and data['recX'] < temp_max and data['recX'] > temp_min: #1927 # for landing
+                # removed = True
+                wantY = result[0][1]
+                if wantY > 25:
+                    wantY = -51 + wantY
+                while data['recX'] < temp_max and data['recX'] > temp_min:
+                    spamwriter.writerow(['Helloworld', wantY, data['recY']])
+                    data['recY'] = data['recY'] * -1
+                    if abs(data['recY']) >= 22:
+                        ans = struct_format((abs(data['recY'])/data['recY'])*45, 0)
+                        spamwriter.writerow(sim_input)
+                        sys.stdout.buffer.write(ans)
+                        sys.stdout.buffer.flush()
+                        x = sys.stdin.buffer.read(struct.calcsize(">Hhffb31B"))
+                        sim_input = list(struct.unpack(">Hhffb31B", x))
+                        data = {'time': sim_input[0], 'recX': sim_input[1], 'windX': sim_input[2], 'windY': sim_input[3], 'recY': sim_input[4],'sample': sim_input[-31:]}
+                    else:
+                        if wantY > data['recY']:
+                            ans = get_struct(data['windY'], False, True)
+                        elif wantY < data['recY']:
+                            ans = get_struct(data['windY'], True, False)
+                        else:
+                            ans = get_struct(data['windY'], False, False)
+                        sys.stdout.buffer.write(ans)
+                        sys.stdout.buffer.flush()
+                        x = sys.stdin.buffer.read(struct.calcsize(">Hhffb31B"))
+                        sim_input = list(struct.unpack(">Hhffb31B", x))
+                        data = {'time': sim_input[0], 'recX': sim_input[1], 'windX': sim_input[2], 'windY': sim_input[3], 'recY': sim_input[4],'sample': sim_input[-31:]}
+                result.pop(0)
+                ans = get_struct(data['windY'], False, False)
+                spamwriter.writerow(sim_input)
+                sys.stdout.buffer.write(ans)
+                sys.stdout.buffer.flush()
+                # drop
+                # continue
+
+            elif data['recX'] <= 35:  # landing
                 # derive lateral airspeed based on windX and recY
                 if data['recY'] == 0:   # maintain course
-                    ans = struct.pack(">fBBBB", -1*data['windY'], 0, 0, 0, 0)
+                    ans = struct_format(-1*data['windY'], 0)
                     spamwriter.writerow(sim_input)
                     sys.stdout.buffer.write(ans)
                     sys.stdout.buffer.flush()
                 else:
                     if abs(data['recY']) >= 22:
-                        ans = struct.pack(">fBBBB", (abs(data['recY'])/data['recY'])*30, 0, 0, 0, 0)
+                        ans = struct_format((abs(data['recY'])/data['recY'])*30, 0)
                         spamwriter.writerow(sim_input)
                         sys.stdout.buffer.write(ans)
                         sys.stdout.buffer.flush()
                     else:
-                        ans = struct.pack(">fBBBB", (abs(data['recY'])/data['recY'])*30, 0, 0, 0, 0)
+                        ans = struct_format((abs(data['recY'])/data['recY'])*30, 0)
                         spamwriter.writerow(sim_input)
                         sys.stdout.buffer.write(ans)
                         sys.stdout.buffer.flush()
-            else:
+            else:   # dodge trees
                 right, left = get_direction(data)
                 ans = get_struct(data['windY'], right, left)
                 spamwriter.writerow(sim_input)
