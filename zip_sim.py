@@ -51,10 +51,10 @@ RECOVERY_Y_MIN = 7.5
 RECOVERY_Y_MAX = WORLD_WIDTH - 7.5
 
 NUM_DELIVERY_SITES = 10
-TYPICAL_NUM_TREES = 0
-MAX_NUM_TREES = 0
-# TYPICAL_NUM_TREES = 20
-# MAX_NUM_TREES = 100
+# TYPICAL_NUM_TREES = 0
+# MAX_NUM_TREES = 0
+TYPICAL_NUM_TREES = 20
+MAX_NUM_TREES = 100
 
 # The vehicle always moves with constant forward airspeed. Its groundspeed varies based on the wind.
 VEHICLE_AIRSPEED = 30.0
@@ -216,7 +216,6 @@ class DeliverySite(Circle):
     _image = load_image("delivery_site.png")
 
     def __init__(self, position):
-        print(position)
         super().__init__(position, radius=DELIVERY_SITE_RADIUS)
 
     def draw(self, camera, surface):
@@ -567,7 +566,7 @@ if __name__ == "__main__":
 
         pilot.stdin.close()
         pilot.stdout.close()
-        pilot.kill()    # gonna have to find a more peaceful way to do this
+        pilot.wait()    # gonna have to find a more peaceful way to do this
 
     print("Deliveries: {}".format(len(package_count_by_site)))
     print("ZIPAA Violations: {}".format(sum((x - 1 for x in package_count_by_site.values() if x > 1))))
